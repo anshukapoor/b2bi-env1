@@ -43,10 +43,9 @@ persistentVolume:
   # If we want to use any specific PV to bind with PVC then provide PV label name and value else it would be bind with any available PV.
   # Default value is mentioned the below.
   labelName: "app.kubernetes.io/name"
-  labelValue: "pv-sspcm"
+  labelValue: "ibm-ssp-cm-pv-name"
   # useDynamicProvisioning is whether or not to use Storage Classes to dynamically create Persistent Volumes 
   useDynamicProvisioning: false
-  storageClassName: "manual"
   size: 2Gi
   accessMode: "ReadWriteOnce"
   

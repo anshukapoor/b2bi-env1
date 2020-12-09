@@ -1,7 +1,13 @@
 kind: PersistentVolume
 apiVersion: v1
 metadata:
-  name: pv-sspcm 
+  name: ibm-ssp-cm-pv
+  labels:
+    app.kubernetes.io/name: ibm-ssp-cm-pv-name
+    app.kubernetes.io/instance: ibm-ssp-cm-pv-release
+    app.kubernetes.io/managed-by: helm 
+    helm.sh/chart: ibm-ssp-cm
+    release: ibm-ssp-cm-pv-release
 spec:
   capacity:
     storage: 2Gi
@@ -9,18 +15,5 @@ spec:
     - ReadWriteOnce
   nfs:
     server: 192.168.1.72
-    path: /var/nfsshare/b2bi-env1/ssp/cm
+    path: /var/nfsshare/b2bi-env1/ssp
 
----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: pvc-sspcm
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 2Gi
-  volumeName: pv-sspcm
-  volumeMode: Filesystem
