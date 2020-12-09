@@ -1,15 +1,14 @@
-# Default values for ibm-ssp-cm chart.
+# Default values for ibm-ssp-engine.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-
 image:
   # set full path with image name
-  repository: image-registry.openshift-image-registry.svc:5000/b2bi-env1/ssp_cm_6011_02
+  repository: image-registry.openshift-image-registry.svc:5000/b2bi-env1/ssp_engine_6011_02
   # set image tag
   tag: 6.0.1.1.02
   # Create image secret and set the image secret name below. 
-  imageSecrets: default-dockercfg-wspb7
+  imageSecrets: default-dockercfg-cv52c
   # image pull policy 
   pullPolicy: Always
 
@@ -18,32 +17,33 @@ fullnameOverride: ""
 arch: "amd64"
 
 
-cmArgs:
+engineArgs:
   # User UID map between the processes running inside a container and the host system.
   appUserUid: 1000
   # User GID map between the processes running inside a container and the host system.
-  appUserGid: 1000
-   # Set the value "true" to Generate Key Certificate, if you are installing Secure Proxy CM first and 
-   # supply the following key certificate details: keyCertFileName, keyCertAliasName, 
-   # keyCertStorePassphrase(secret) and keyCertEncryptPassphrase(secret)
-   # Set the value "false" to Import Key Cert Exported from Secure Proxy Engine if you have installed Secure Proxy Engine first and
-   # supply the following key certificate details: keyCertFileName and keyCertEncryptPassphrase(secret)  
-  keyCertExport: true
-  # Set the certificate file name (The certificate file generates inside the installation directory)
+  appUserGid: 1000  
+   # Set the value "true" to Generate Key Certificate, if you are installing Secure Proxy Engine before CM and supply the following
+   # key certificate details: keyCertFileName, keyCertAliasName, keyCertStorePassphrase(secret) and keyCertEncryptPassphrase(secret)
+   # Set the value "false" to Import Key Cert Exported from Secure Proxy CM if you have installed Secure Proxy CM first and
+   # supply the following key certificate details: keyCertFileName, keyCertAliasName and keyCertEncryptPassphrase(secret)  
+  keyCertExport: false
+  # Key certificate file name 
   keyCertFileName: "defkeyCert.txt"
-  # Set the certificate alias value. 
+  # Certificate alias value. 
   keyCertAliasName: "keycert"
   # JVM max heap size - don't set more than container limit resource memory. 
   maxHeapSize: "2048m"
-  
+  # Change SSP brand name if required else keep it as it is.
+  signOnDirName: "Signon"
 
+  
 # persistence section specifies persistence settings which apply to the whole chart
 persistentVolume:
   enabled: true
   # If we want to use any specific PV to bind with PVC then provide PV label name and value else it would be bind with any available PV.
   # Default value is mentioned the below.
   labelName: "app.kubernetes.io/name"
-  labelValue: "ibm-ssp-cm-pv-name"
+  labelValue: "ibm-ssp-engine-pv-name"
   # useDynamicProvisioning is whether or not to use Storage Classes to dynamically create Persistent Volumes 
   useDynamicProvisioning: false
   size: 2Gi
@@ -54,26 +54,35 @@ persistentVolume:
 service:
   # Set the service type.
   type: "LoadBalancer"
-  # Add external IP to access application outside the cluster using the IP mentioned below. 
+  # Add external IP to access application outside the cluster using the IP mentioned below.
   externalIP: ""
-  jetty: 
-    # CM web application is accessed by using below mentioned service port, so add as per the requirement else it would be set 8443 as default port. 
-    servicePort: 8443
-    # If traditional jetty port is different from 8443 while migrating from traditional to container environment then in this case 
-    # we need to change container port as traditional jetty port value else It is not required to change the container port value.     
-    containerPort: 8443
-  cm: 
-    # CM is listen on the below mentioned service port, so add as per the requirement else it would be set 62366 as default port. 
-    servicePort: 62366
-    # If traditional CM listen port is different from 62366 while migrating from traditional to container environment then in this case 
-    # we need to change container port as traditional CM listen port value else It is not required to change the container port value.   
-    containerPort: 62366
+  engine: 
+    # Engine application is accessed by using below mentioned service port, so add port as per the requirement else it would be set 63366 as default port.
+    servicePort: 63366
+    # If traditional engine port is different from 63366 while migrating from traditional to container environment then in this case 
+    # we need to change container port as traditional engine port value else It is not required to change the container port value.    
+    containerPort: 63366
+  psMoreSecure: 
+    # More Secure Perimeter Server application is accessed by using below mentioned service port, so add the port number as per the requirement.
+    # The below mentioned service port must be used as remote port while configuring more secure perimeter server.   
+    servicePort:  
+    
+  # Configure adapter ports if we are not using Less Secure Perimeter Server. Below are the sample that how add adapter ports.
+  adapters: []
   
+# Configure adapter Ports
+  #adapters:
+    #- name: ftp-adapter
+    #  port: 40010
+    #- name: sft-adapter
+    #  port: 40011 
+    #- name: http-adapter
+    #  port: 40012       
 
 # Secret 
 secret:
   # create secret and set the secret name below 
-  secretName: secret-sspcm 
+  secretName: secret-sspengine 
 
   
 # Use existing service account or manage by helm chart.
@@ -84,18 +93,17 @@ serviceAccount:
   create: true
   name: ""
 
-
 ## Configure resource requests and limits
 ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
 ## Container CPU -  limit and request both are set 1 CPU(1000m) as default value but we can modify as per the requirement.
-## Container Memory - limit and request both are set 2 GB as default value but we can modify as per the requirement.
+## Container Memory - limit and request both are set 3 GB as default value but we can modify as per the requirement.
 resources:
   limits:
     cpu: 1000m
-    memory: 2Gi
+    memory: 3Gi
   requests:
     cpu: 1000m
-    memory: 2Gi
+    memory: 3Gi
 
 affinity:
   # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#node-affinity-beta-feature
@@ -135,19 +143,20 @@ readinessProbe:
   periodSeconds: 60
   failureThreshold: 10
 
- # OpenShift route can be enabled by changing value from false to true. 
 route:
   enabled: true
+
   
 # The following files can be customized using key value pair in the list format.
-# conf/log4j.properties, bin/log.properties, bin/security.properties, bin/vendor.properties 
+# bin/log.properties, bin/security.properties, bin/perimeter.properties, bin/cdsp.properties, bin/portal/mediatypes.properties 
+# bin/portal/pages.properties, conf/log4j.properties
 # Add/Update: Key and Value both must be provided in the below format.
 # <File Name Without Extension>_<Property Name>=<Property Value>
 customProperties: []
 # below is the example: 
 #customProperties:
-#  - log4j_log4j.logger.org.apache.commons.beanutils=OFF
 #  - log_audit.log.maxfilesize=10MB
+#  - perimeter_conduitStreamPair.bufferSize=500K
 
 
 # Add/Update VM arguments in the list format
@@ -155,40 +164,41 @@ customProperties: []
 vmArguments: []
 # below is the example: 
 #vmArguments:
-#  - Dssp.cm.jetty.sni.enable=false
-#  - DvalidateThruXSD=false
-#  - DsspcmDisableClientEndpointIdentification=true
+#  - Djavax.net.debug=ssl,handshake,data,trustmanager
+#  - Xdump:java+heap:events=user
 
 
-# Use custom common certificate. It updates the engine, CM, and web server certificate. 
-# Exports the common certificate configuration into the PV mapped directory.
-# Exported certificate(commonKeyCertFile) can be imported into the Engine.
-# set the value "true" to update the custom certificate.
-# set the value "false" to not update the custom certificate.  
+# Use to import custom certificate which was exported from the CM.
+# set the value "true" to import the custom certificate.
+# set the value "false" to not import the custom certificate.  
 customCertificate:
   customCertEnabled: false
-  # set key store certificate file name
-  commonCertFile: ""
   # set alias name
   commonCertAlias: ""
-  # set export key certificate file name and it can be imported into the Engine.
+  # set key certificate file name which was exported from the CM.
   commonKeyCertFile: ""
 # below is the example: 
 #customCertificate:
 #  customCertEnabled: true
-#  commonCertFile: "commonKeyStore.p12"
 #  commonCertAlias: "commonCert"
 #  commonKeyCertFile: "commonDefKeyCert.txt"
 
 
 # The custom directories/files can be mapped using the list format.
 # For mapping, We need to provide full path of the file or directory. 
-# First we need to create the directory with 'CM_RESOURCES' name if it is not available into PV. 
+# First we need to create the directory with 'ENG_RESOURCES' name if it is not available into PV. 
 # and keep the custom directories/files into created directory. 
 customFiles: []
-# In the below example we need to keep log4j2.xml file inside 'CM_RESOURCES' directory.
-# so that the container will copy this file into respective directory.   
+# In the below example we need to keep aspera.conf, log4j2.xml, ncipher_gen2.cfg.jsse and lunasa_6_0.cfg.jsse files and
+# Signon directory inside 'ENG_RESOURCES' directory.
+# so that the container will copy these files into respective directory.   
 #customFiles:
+#  - /bin/aspera.conf
 #  - /conf/log4j2.xml
+#  - /conf/lunasa_6_0.cfg.jsse
+#  - /conf/ncipher_gen2.cfg.jsse
+#  - /Signon 
+
+  
 
 
